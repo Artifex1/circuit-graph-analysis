@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
+	"gonum.org/v1/gonum/graph"
 	"gonum.org/v1/gonum/graph/simple"
 	"gonum.org/v1/gonum/graph/topo"
 )
@@ -212,28 +213,42 @@ func visualizeGraph(dataGraph *simple.UndirectedGraph, templateName string) {
 	viewGraph.Render(f)
 }
 
-func analyzeGraph(graph *simple.UndirectedGraph) {
-	fmt.Println("Graph Analysis:")
-
-	fmt.Printf("There are %d nodes (signals) in this graph.\n", graph.Nodes().Len())
+func analyzeGraph(g *simple.UndirectedGraph) {
+	fmt.Printf("There are %d nodes (signals) in this graph.\n", g.Nodes().Len())
 
 	// Check for signals with one or no connections
-	underconstrained := findUnderconstrainedSignals(graph)
+	underconstrained := findUnderconstrainedSignals(g)
 	if len(underconstrained) > 0 {
 		fmt.Println("Potentially underconstrained signals (one or no connections):", underconstrained)
 	} else {
 		fmt.Println("No potentially underconstrained signals found.")
 	}
 
-	// Check for independent subgraphs
-	subgraphs := topo.ConnectedComponents(graph)
+	// Create a copy of the graph for subgraph analysis
+	gc := simple.NewUndirectedGraph()
+	graph.Copy(gc, g)
+
+	// Remove node 0 from the copy, which is the "1" signal
+	gc.RemoveNode(int64(0))
+
+	// Check for independent subgraphs in the modified copy
+	subgraphs := topo.ConnectedComponents(gc)
 	if len(subgraphs) > 1 {
-		fmt.Printf("Warning: Found %d independent subgraphs. The circuit might be underconstrained or should be broken into separate templates.\n", len(subgraphs))
+		fmt.Printf("Found %d independent subgraphs after removing node 0. The circuit might be underconstrained or should be broken into separate templates.\n", len(subgraphs))
 		for i, subgraph := range subgraphs {
-			fmt.Printf("Subgraph %d signals: %v\n", i+1, subgraph)
+			fmt.Printf("Subgraph %d:\n", i+1)
+			for _, node := range subgraph {
+				nodeID := node.ID()
+				// Use the original graph to get the node name
+				if namedNode, ok := g.Node(nodeID).(*NamedNode); ok {
+					fmt.Printf("  - %s\n", namedNode.Name)
+				} else {
+					fmt.Printf("  - Node ID: %d\n", nodeID)
+				}
+			}
 		}
 	} else {
-		fmt.Println("The graph is fully connected.")
+		fmt.Println("The graph remains fully connected after removing node 0.")
 	}
 }
 
