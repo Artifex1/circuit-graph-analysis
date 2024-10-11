@@ -234,7 +234,7 @@ func analyzeGraph(g *simple.UndirectedGraph) {
 	// Check for independent subgraphs in the modified copy
 	subgraphs := topo.ConnectedComponents(gc)
 	if len(subgraphs) > 1 {
-		fmt.Printf("Found %d independent subgraphs after removing node 0. The circuit might be underconstrained or should be broken into separate templates.\n", len(subgraphs))
+		fmt.Printf("Found %d independent subgraphs after removing \"1\" signal. The circuit might be underconstrained or should be broken into separate templates.\n", len(subgraphs))
 		for i, subgraph := range subgraphs {
 			fmt.Printf("Subgraph %d:\n", i+1)
 			for _, node := range subgraph {
